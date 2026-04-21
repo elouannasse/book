@@ -1,27 +1,41 @@
 "use client";
 
-import { createContext, useContext, useMemo, useReducer } from "react";
-import type { BookSummary } from "@/lib/openLibrary";
-import { addFavorite, getFavorites, removeFavorite } from "@/lib/jsonServer";
+import { createContext, useContext, useEffect, useMemo, useReducer } from "react";
+import type { Book } from "@/lib/openLibrary";
+import {
+  addFavorite as addFavoriteRequest,
+  deleteFavorite as deleteFavoriteRequest,
+  getFavorites as getFavoritesRequest,
+  type FavoriteRecord
+} from "@/lib/jsonServer";
+import { useAuth } from "@/context/AuthContext";
 
 type FavoritesState = {
-  items: BookSummary[];
+  favorites: FavoriteRecord[];
   loading: boolean;
 };
 
 type FavoritesAction =
   | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_FAVORITES"; payload: BookSummary[] }
-  | { type: "ADD_FAVORITE"; payload: BookSummary }
-  | { type: "REMOVE_FAVORITE"; payload: string }
-  | { type: "CLEAR" };
+  | { type: "SET_FAVORITES"; payload: FavoriteRecord[] }
+  | { type: "ADD_FAVORITE"; payload: FavoriteRecord }
+  | { type: "REMOVE_FAVORITE"; payload: number };
+
+export type Favorite = {
+  id: number;
+  userId: number;
+  bookKey: string;
+  title: string;
+  author: string;
+  coverId: number;
+};
 
 type FavoritesContextValue = {
-  items: BookSummary[];
+  favorites: Favorite[];
   loading: boolean;
-  loadFavorites: (userId: number) => Promise<void>;
-  toggleFavorite: (userId: number, book: BookSummary) => Promise<void>;
-  isFavorite: (bookId: string) => boolean;
+  addFavorite: (book: Book) => Promise<void>;
+  removeFavorite: (favoriteId: number) => Promise<void>;
+  isFavorite: (bookKey: string) => boolean;
   clearFavorites: () => void;
 };
 
@@ -32,59 +46,104 @@ function reducer(state: FavoritesState, action: FavoritesAction): FavoritesState
     case "SET_LOADING":
       return { ...state, loading: action.payload };
     case "SET_FAVORITES":
-      return { ...state, items: action.payload, loading: false };
+      return { ...state, favorites: action.payload, loading: false };
     case "ADD_FAVORITE":
-      if (state.items.some((item) => item.id === action.payload.id)) {
+      if (state.favorites.some((item) => item.bookKey === action.payload.bookKey)) {
         return state;
       }
-      return { ...state, items: [action.payload, ...state.items] };
+      return { ...state, favorites: [action.payload, ...state.favorites] };
     case "REMOVE_FAVORITE":
-      return { ...state, items: state.items.filter((item) => item.id !== action.payload) };
-    case "CLEAR":
-      return { items: [], loading: false };
+      return { ...state, favorites: state.favorites.filter((item) => item.id !== action.payload) };
     default:
       return state;
   }
 }
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
+  const { user, isLoading: authLoading } = useAuth();
   const [state, dispatch] = useReducer(reducer, {
-    items: [],
-    loading: false
+    favorites: [],
+    loading: true
   });
+
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!user) {
+      dispatch({ type: "SET_FAVORITES", payload: [] });
+      return;
+    }
+
+    let cancelled = false;
+
+    const run = async () => {
+      dispatch({ type: "SET_LOADING", payload: true });
+      try {
+        const nextFavorites = await getFavoritesRequest(user.id);
+        if (cancelled) {
+          return;
+        }
+        dispatch({ type: "SET_FAVORITES", payload: nextFavorites });
+      } catch {
+        if (!cancelled) {
+          dispatch({ type: "SET_FAVORITES", payload: [] });
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading]);
 
   const value = useMemo<FavoritesContextValue>(
     () => ({
-      items: state.items,
+      favorites: state.favorites,
       loading: state.loading,
-      loadFavorites: async (userId) => {
-        dispatch({ type: "SET_LOADING", payload: true });
-        const records = await getFavorites(userId);
-        const mapped: BookSummary[] = records.map((item) => ({
-          id: item.bookId,
-          title: item.title,
-          author: item.author,
-          coverUrl: item.coverUrl,
-          firstPublishYear: item.firstPublishYear
-        }));
-        dispatch({ type: "SET_FAVORITES", payload: mapped });
-      },
-      toggleFavorite: async (userId, book) => {
-        const exists = state.items.some((item) => item.id === book.id);
-
-        if (exists) {
-          await removeFavorite(userId, book.id);
-          dispatch({ type: "REMOVE_FAVORITE", payload: book.id });
+      addFavorite: async (book) => {
+        if (!user) {
           return;
         }
 
-        await addFavorite(userId, book);
-        dispatch({ type: "ADD_FAVORITE", payload: book });
+        const duplicate = state.favorites.some((item) => item.bookKey === book.key);
+        if (duplicate) {
+          return;
+        }
+
+        dispatch({ type: "SET_LOADING", payload: true });
+        try {
+          const created = await addFavoriteRequest({
+            userId: user.id,
+            bookKey: book.key,
+            title: book.title,
+            author: book.author_name.length > 0 ? book.author_name.join(", ") : "Unknown author",
+            coverId: book.cover_i ?? 0
+          });
+          dispatch({ type: "ADD_FAVORITE", payload: created });
+        } finally {
+          dispatch({ type: "SET_LOADING", payload: false });
+        }
       },
-      isFavorite: (bookId) => state.items.some((item) => item.id === bookId),
-      clearFavorites: () => dispatch({ type: "CLEAR" })
+      removeFavorite: async (favoriteId) => {
+        dispatch({ type: "SET_LOADING", payload: true });
+        try {
+          await deleteFavoriteRequest(favoriteId);
+          dispatch({ type: "REMOVE_FAVORITE", payload: favoriteId });
+        } finally {
+          dispatch({ type: "SET_LOADING", payload: false });
+        }
+      },
+      isFavorite: (bookKey) => state.favorites.some((item) => item.bookKey === bookKey),
+      clearFavorites: () => {
+        dispatch({ type: "SET_FAVORITES", payload: [] });
+        dispatch({ type: "SET_LOADING", payload: false });
+      }
     }),
-    [state.items, state.loading]
+    [state.favorites, state.loading, user]
   );
 
   return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;

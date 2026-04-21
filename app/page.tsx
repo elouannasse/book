@@ -5,15 +5,16 @@ import BookCard from "@/components/BookCard";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import Pagination from "@/components/Pagination";
 import SearchBar from "@/components/SearchBar";
-import { searchBooks, type BookSummary } from "@/lib/openLibrary";
+import { searchBooks, type Book } from "@/lib/openLibrary";
 
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 10;
 
 export default function HomePage() {
   const [query, setQuery] = useState("javascript");
+  const [genre, setGenre] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [books, setBooks] = useState<BookSummary[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +25,7 @@ export default function HomePage() {
       try {
         setLoading(true);
         setError(null);
-        const result = await searchBooks(query, page);
+        const result = await searchBooks(query, genre, page);
         if (cancelled) return;
         setBooks(result.books);
         setTotal(result.total);
@@ -42,7 +43,7 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, [query, page]);
+  }, [query, genre, page]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
 
@@ -54,8 +55,10 @@ export default function HomePage() {
         <div className="mt-4">
           <SearchBar
             initialValue={query}
-            onSearch={(next) => {
-              setQuery(next);
+            initialGenre={genre}
+            onSearch={(nextQuery, nextGenre) => {
+              setQuery(nextQuery);
+              setGenre(nextGenre);
               setPage(1);
             }}
           />
@@ -68,12 +71,12 @@ export default function HomePage() {
       {!loading && !error ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {books.map((book) => (
-            <BookCard key={book.id} book={book} />
+            <BookCard key={book.key} book={book} />
           ))}
         </div>
       ) : null}
 
-      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
     </section>
   );
 }

@@ -1,5 +1,3 @@
-import type { BookSummary } from "@/lib/openLibrary";
-
 export type User = {
   id: number;
   firstName: string;
@@ -16,12 +14,13 @@ export type AppUser = StoredUser;
 export type FavoriteRecord = {
   id: number;
   userId: number;
-  bookId: string;
+  bookKey: string;
   title: string;
   author: string;
-  coverUrl: string | null;
-  firstPublishYear: number | null;
+  coverId: number;
 };
+
+export type FavoriteInput = Omit<FavoriteRecord, "id">;
 
 const API_BASE = process.env.NEXT_PUBLIC_JSON_SERVER_URL ?? "http://localhost:3001";
 
@@ -58,38 +57,28 @@ export async function loginUser(email: string, password: string): Promise<Stored
 }
 
 export async function getFavorites(userId: number): Promise<FavoriteRecord[]> {
-  const response = await fetch(`${API_BASE}/favorites?userId=${userId}`, { cache: "no-store" });
+  const response = await fetch(`${API_BASE}/favorites?userId=${encodeURIComponent(String(userId))}`, {
+    cache: "no-store"
+  });
   return parseJson<FavoriteRecord[]>(response);
 }
 
-export async function addFavorite(userId: number, book: BookSummary): Promise<FavoriteRecord> {
+export async function addFavorite(data: FavoriteInput): Promise<FavoriteRecord> {
   const response = await fetch(`${API_BASE}/favorites`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      userId,
-      bookId: book.id,
-      title: book.title,
-      author: book.author,
-      coverUrl: book.coverUrl,
-      firstPublishYear: book.firstPublishYear
-    })
+    body: JSON.stringify(data)
   });
 
   return parseJson<FavoriteRecord>(response);
 }
 
-export async function removeFavorite(userId: number, bookId: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/favorites?userId=${userId}&bookId=${encodeURIComponent(bookId)}`, {
-    cache: "no-store"
+export async function deleteFavorite(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/favorites/${id}`, {
+    method: "DELETE"
   });
-  const matches = await parseJson<FavoriteRecord[]>(response);
 
-  await Promise.all(
-    matches.map((item) =>
-      fetch(`${API_BASE}/favorites/${item.id}`, {
-        method: "DELETE"
-      })
-    )
-  );
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
 }

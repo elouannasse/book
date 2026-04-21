@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"next dev -p 3000\" \"json-server --watch db.json --port 3001\"",
+    "dev": "next dev",
+    "server": "json-server --watch db.json --port 3001",
+    "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "json-server": "json-server --watch db.json --port 3001"
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "^14.2.0",
