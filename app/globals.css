@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f8fbff;
+  --surface: #ffffff;
+  --text: #152033;
+}
+
+body {
+  background: radial-gradient(circle at 10% 10%, #dfe8ff 0%, #f8fbff 40%, #f4f7fb 100%);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.page-wrap {
+  @apply mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8;
+}
