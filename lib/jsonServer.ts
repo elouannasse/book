@@ -22,63 +22,47 @@ export type FavoriteRecord = {
 
 export type FavoriteInput = Omit<FavoriteRecord, "id">;
 
+import { fetchJson } from "@/lib/http";
+
 const API_BASE = process.env.NEXT_PUBLIC_JSON_SERVER_URL ?? "http://localhost:3001";
 
-async function parseJson<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
-  }
-  return (await response.json()) as T;
-}
-
 export async function findUserByEmail(email: string): Promise<StoredUser | null> {
-  const response = await fetch(`${API_BASE}/users?email=${encodeURIComponent(email)}`, { cache: "no-store" });
-  const users = await parseJson<StoredUser[]>(response);
+  const users = await fetchJson<StoredUser[]>(`${API_BASE}/users?email=${encodeURIComponent(email)}`, {
+    cache: "no-store"
+  });
   return users[0] ?? null;
 }
 
 export async function registerUser(payload: Omit<StoredUser, "id">): Promise<StoredUser> {
-  const response = await fetch(`${API_BASE}/users`, {
+  return fetchJson<StoredUser>(`${API_BASE}/users`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
-
-  return parseJson<StoredUser>(response);
 }
 
 export async function loginUser(email: string, password: string): Promise<StoredUser | null> {
-  const response = await fetch(
+  const users = await fetchJson<StoredUser[]>(
     `${API_BASE}/users?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
     { cache: "no-store" }
   );
-  const users = await parseJson<StoredUser[]>(response);
   return users[0] ?? null;
 }
 
 export async function getFavorites(userId: number): Promise<FavoriteRecord[]> {
-  const response = await fetch(`${API_BASE}/favorites?userId=${encodeURIComponent(String(userId))}`, {
+  return fetchJson<FavoriteRecord[]>(`${API_BASE}/favorites?userId=${encodeURIComponent(String(userId))}`, {
     cache: "no-store"
   });
-  return parseJson<FavoriteRecord[]>(response);
 }
 
 export async function addFavorite(data: FavoriteInput): Promise<FavoriteRecord> {
-  const response = await fetch(`${API_BASE}/favorites`, {
+  return fetchJson<FavoriteRecord>(`${API_BASE}/favorites`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data)
   });
-
-  return parseJson<FavoriteRecord>(response);
 }
 
 export async function deleteFavorite(id: number): Promise<void> {
-  const response = await fetch(`${API_BASE}/favorites/${id}`, {
-    method: "DELETE"
-  });
-
-  if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
-  }
+  await fetchJson<Record<string, never> | FavoriteRecord>(`${API_BASE}/favorites/${id}`, { method: "DELETE" });
 }

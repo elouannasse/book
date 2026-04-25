@@ -34,6 +34,8 @@ type OpenLibraryWorkResponse = {
   authors?: Array<{ author?: { key?: string } }>;
 };
 
+import { fetchJson } from "@/lib/http";
+
 const OPEN_LIBRARY_BASE = "https://openlibrary.org";
 
 export function getCoverUrl(coverId: number, size: "S" | "M" | "L"): string {
@@ -48,7 +50,7 @@ function normalizeLanguage(value?: string): string | null {
 
 export async function searchBooks(query: string, genre?: string, page = 1): Promise<{ books: Book[]; total: number }> {
   const params = new URLSearchParams({
-    title: query,
+    q: query,
     page: String(page),
     limit: "10"
   });
@@ -57,13 +59,9 @@ export async function searchBooks(query: string, genre?: string, page = 1): Prom
     params.set("subject", genre);
   }
 
-  const response = await fetch(`${OPEN_LIBRARY_BASE}/search.json?${params.toString()}`, { cache: "no-store" });
-
-  if (!response.ok) {
-    throw new Error("Failed to search books");
-  }
-
-  const data = (await response.json()) as OpenLibrarySearchResponse;
+  const data = await fetchJson<OpenLibrarySearchResponse>(`${OPEN_LIBRARY_BASE}/search.json?${params.toString()}`, {
+    cache: "no-store"
+  });
   const books = data.docs.map((doc) => ({
     key: doc.key,
     title: doc.title ?? "Unknown title",
@@ -78,21 +76,15 @@ export async function searchBooks(query: string, genre?: string, page = 1): Prom
 
 export async function getBookDetail(key: string): Promise<BookDetail> {
   const workId = key.replace("/works/", "");
-  const response = await fetch(`${OPEN_LIBRARY_BASE}/works/${workId}.json`, { cache: "no-store" });
-
-  if (!response.ok) {
-    throw new Error("Failed to load book detail");
-  }
-
-  const work = (await response.json()) as OpenLibraryWorkResponse;
+  const work = await fetchJson<OpenLibraryWorkResponse>(`${OPEN_LIBRARY_BASE}/works/${workId}.json`, {
+    cache: "no-store"
+  });
   const authors = await Promise.all(
     (work.authors ?? []).map(async (entry) => {
       const authorKey = entry.author?.key;
       if (!authorKey) return null;
       try {
-        const authorResponse = await fetch(`${OPEN_LIBRARY_BASE}${authorKey}.json`, { cache: "no-store" });
-        if (!authorResponse.ok) return null;
-        const author = (await authorResponse.json()) as { name?: string };
+        const author = await fetchJson<{ name?: string }>(`${OPEN_LIBRARY_BASE}${authorKey}.json`, { cache: "no-store" });
         return author.name ?? null;
       } catch {
         return null;

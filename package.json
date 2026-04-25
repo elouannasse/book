@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently \"npm run next:dev\" \"npm run server\"",
+    "next:dev": "next dev",
     "server": "json-server --watch db.json --port 3001",
-    "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
+    "dev:all": "npm run dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

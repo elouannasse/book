@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import BookCard from "@/components/BookCard";
-import LoadingSkeleton from "@/components/LoadingSkeleton";
 import Pagination from "@/components/Pagination";
 import SearchBar from "@/components/SearchBar";
 import { searchBooks, type Book } from "@/lib/openLibrary";
+
+const LoadingSkeleton = dynamic(() => import("@/components/LoadingSkeleton"));
 
 const PAGE_SIZE = 10;
 

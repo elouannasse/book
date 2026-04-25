@@ -1,4 +1,61 @@
 {
-  "users": [],
-  "favorites": []
+  "users": [
+    {
+      "firstName": "said",
+      "lastName": "said",
+      "email": "said@gmail.com",
+      "password": "said@gmail.com",
+      "id": "gGzHIUqA61k"
+    },
+    {
+      "firstName": "othman",
+      "lastName": "othman",
+      "email": "othman@gmail.com",
+      "password": "othman@gmail.com",
+      "id": "2D4PEjq5nu4"
+    }
+  ],
+  "favorites": [
+    {
+      "userId": "gGzHIUqA61k",
+      "bookKey": "/works/OL9559525W",
+      "title": "Learning PHP, MySQL & JavaScript",
+      "author": "Robin Nixon",
+      "coverId": 5724818,
+      "id": "Lz8ckRk91QE"
+    },
+    {
+      "userId": "gGzHIUqA61k",
+      "bookKey": "/works/OL2358086W",
+      "title": "JavaScript",
+      "author": "Don Gosselin",
+      "coverId": 4640658,
+      "id": "b4f4O_VNfAI"
+    },
+    {
+      "userId": "gGzHIUqA61k",
+      "bookKey": "/works/OL17341092W",
+      "title": "JavaScript and jQuery",
+      "author": "Jon Duckett",
+      "coverId": 7419725,
+      "id": "PSs5kyTLRx8"
+    },
+    {
+      "userId": "gGzHIUqA61k",
+      "bookKey": "/works/OL25520448W",
+      "title": "JavaScript Basics for Beginners",
+      "author": "Andy Vickler",
+      "coverId": 13789638,
+      "id": "0O0siLcOE6E"
+    },
+    {
+      "userId": "2D4PEjq5nu4",
+      "bookKey": "/works/OL25520448W",
+      "title": "JavaScript Basics for Beginners",
+      "author": "Andy Vickler",
+      "coverId": 13789638,
+      "id": "t8gRSXdRUNI"
+    }
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
 }
